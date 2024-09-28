@@ -86,6 +86,38 @@ async function insertFoodItems(jsonFoodItems) {
 }
 
 
+async function removeFoodItem(foodItem) { 
+
+    const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
+
+    try { 
+        await mongoClient.connect();
+
+        for(item of jsonFoodItems) {
+            const foodItem = {
+                foodItem: item.foodItem,
+                quantity: item.quantity,
+                unit: item.unit,
+                expirationDate: item.expirationDate
+            };
+    
+            const db = mongoClient.db("ShelfSense");
+            const collection = db.collection("USERS");
+    
+            await collection.updateOne(
+                { username: "ankit.roy" },  // Find the user by their ID
+                { $push: { pantry: foodItem } }  // Push the foodItem to the pantry array
+            );
+        }
+    } catch (error) {
+        console.error("Error occurred:", error);
+    } finally {
+        await mongoClient.close();  // Ensure the client is closed
+        console.log("Connection closed");
+    }
+}
+
+
 (async() => {
     const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
 
