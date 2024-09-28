@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_KEY = '8aebfb1719074b5c93c16e3fb150a647'; // Replace with your Spoonacular API key
+const API_KEY = 'fasdfds'; // Replace with your Spoonacular API key
 
 const ingredients = 'apples,flour,sugar';
 const numberOfRecipes = 2;
