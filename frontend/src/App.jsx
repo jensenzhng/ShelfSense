@@ -1,38 +1,171 @@
 import { useState } from "react";
 import { useVoiceToText } from "react-speakup";
+import axios from "axios";
+import { useEffect } from "react";
 
 function ShelfSense() {
     const [inputValue, setInputValue] = useState("");
     const [quantity, setQuantity] = useState("");
+    const [unit, setUnit] = useState("");
     const [expirationDate, setExpirationDate] = useState("");
     const [ingredients, setIngredients] = useState([]);
+
+    useEffect(() => {
+        const fetchPantryData = async () => {
+            try {
+                const response = await axios.get(
+                    "http://localhost:3000/pantry?userId=ankit.roy"
+                );
+                // Assuming response data is an array of pantry items
+                setIngredients(response.data);
+            } catch (error) {
+                console.error("Error fetching pantry data:", error);
+            }
+        };
+
+        fetchPantryData();
+    }, []); // Fetch pantry data only once when the component mounts
 
     const { startListening, stopListening, transcript, reset } =
         useVoiceToText();
 
     const [isListening, setIsListening] = useState(false);
 
-    const handleAdd = () => {
-        if (
-            inputValue.trim() !== "" &&
-            quantity.trim() !== "" &&
-            expirationDate.trim() !== ""
-        ) {
-            const newIngredient = {
-                name: inputValue,
-                quantity,
-                expiration: expirationDate,
-            };
-            setIngredients([...ingredients, newIngredient]);
-            setInputValue(""); // clear input field after adding
-            setQuantity(""); // clear quantity field
-            setExpirationDate(""); // clear expiration date field
+    const handleTranscriptAdd = async () => {
+        if (transcript.trim() !== "") {
+            try {
+                // Send the transcript to the server for interpretation
+                const response = await axios.post(
+                    "http://localhost:3000/interpret-voice",
+                    {
+                        speechInput: transcript,
+                    }
+                );
+
+                if (response.status === 200) {
+                    console.log("Interpreted data:", response.data);
+                    const interpretedItems = response.data; // Expecting an array of objects
+
+                    // Update the ingredients list with all the interpreted items
+                    const newIngredients = interpretedItems.map((item) => ({
+                        foodItem: item.foodItem,
+                        quantity: item.quantity,
+                        unit: item.unit,
+                        expirationDate: item.expirationDate,
+                    }));
+
+                    const response2 = await axios.post(
+                        "http://localhost:3000/pantry",
+                        {
+                            userId: "ankit.roy", // Replace this with dynamic userId if needed
+                            foodItems: newIngredients, // Send newIngredient as an array
+                        }
+                    );
+
+                    if (response2.status === 200) {
+                        console.log(
+                            "Food item added successfully:",
+                            response2.data
+                        );
+                        setIngredients((prevIngredients) => [
+                            ...prevIngredients,
+                            ...newIngredients,
+                        ]);
+                        reset(); // Reset the transcript after adding
+                    } else {
+                        console.error(
+                            "Failed to add the food item:",
+                            response2.data
+                        );
+                    }
+                } else {
+                    console.error("Failed to interpret voice:", response.data);
+                }
+            } catch (error) {
+                console.error("Error interpreting voice:", error);
+            }
         }
     };
 
-    const handleDelete = (index) => {
-        const newIngredients = ingredients.filter((_, i) => i !== index);
-        setIngredients(newIngredients);
+    const handleAdd = async () => {
+        if (
+            inputValue.trim() !== "" &&
+            quantity.trim() !== "" &&
+            unit.trim() !== "" &&
+            expirationDate.trim() !== ""
+        ) {
+            let date = new Date(expirationDate);
+            const formattedDate = `${date.getMonth() + 1}/${
+                date.getDate() + 1
+            }/${date.getFullYear()}`;
+
+            const newIngredient = {
+                foodItem: inputValue,
+                quantity,
+                expirationDate: formattedDate, // corrected key to match schema
+                unit,
+            };
+
+            try {
+                // Make a POST request to the server to add the new ingredient
+                const response = await axios.post(
+                    "http://localhost:3000/pantry",
+                    {
+                        userId: "ankit.roy", // Replace this with dynamic userId if needed
+                        foodItems: [newIngredient], // Send newIngredient as an array
+                    }
+                );
+
+                if (response.status === 200) {
+                    console.log("Food item added successfully:", response.data);
+                    // Update local state only if the post request was successful
+                    setIngredients([...ingredients, newIngredient]);
+                } else {
+                    console.error(
+                        "Failed to add the food item:",
+                        response.data
+                    );
+                }
+            } catch (error) {
+                console.error("Error adding food item:", error);
+            }
+
+            // Clear the input fields after adding
+            setUnit("");
+            setInputValue("");
+            setQuantity("");
+            setExpirationDate("");
+        }
+    };
+
+    const handleDelete = async (index) => {
+        const foodItemToDelete = ingredients[index].foodItem; // Get the foodItem from the ingredient
+
+        try {
+            // Make a DELETE request to the server to delete the food item
+            const response = await axios.delete(
+                "http://localhost:3000/pantry",
+                {
+                    data: {
+                        userId: "ankit.roy", // Replace this with dynamic userId if needed
+                        foodItemName: foodItemToDelete,
+                    },
+                }
+            );
+
+            if (response.status === 200) {
+                console.log("Food item removed successfully:", response.data);
+                // Update local state only if the delete request was successful
+                const newIngredients = ingredients.filter(
+                    (_, i) => i !== index
+                );
+                setIngredients(newIngredients);
+            } else {
+                console.error("Failed to remove the food item:", response.data);
+            }
+        } catch (error) {
+            console.error("Error removing food item:", error);
+        }
     };
 
     const handleMicrophoneClick = () => {
@@ -46,7 +179,7 @@ function ShelfSense() {
     };
 
     return (
-        <div className="flex flex-col items-center mt-10 px-8">
+        <div className="flex flex-col items-center my-10 px-8">
             <div className="flex space-x-2 mb-4 max-w-2xl w-full">
                 <input
                     type="text"
@@ -61,6 +194,13 @@ function ShelfSense() {
                     placeholder="Quantity"
                     value={quantity}
                     onChange={(e) => setQuantity(e.target.value)}
+                />
+                <input
+                    type="text"
+                    className="border border-gray-300 rounded-lg p-2 w-16"
+                    placeholder="Unit"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
                 />
                 <input
                     type="date"
@@ -99,7 +239,10 @@ function ShelfSense() {
                     Reset Transcript
                 </button>
 
-                <button className="bg-blue-500 text-white px-4 py-2 rounded-lg">
+                <button
+                    onClick={handleTranscriptAdd}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+                >
                     Add
                 </button>
             </div>
@@ -115,8 +258,9 @@ function ShelfSense() {
                         className="flex justify-between items-center border border-gray-300 rounded-lg p-3"
                     >
                         <span className="text-gray-700">
-                            {ingredient.quantity} {ingredient.name} - expires on{" "}
-                            {ingredient.expiration}
+                            {ingredient.quantity} {ingredient.unit}{" "}
+                            {ingredient.foodItem} - expires on{" "}
+                            {ingredient.expirationDate}
                         </span>
                         <button
                             onClick={() => handleDelete(index)}
