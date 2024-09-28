@@ -54,12 +54,15 @@ async function interpretVoice(speechInput) {
       }
 }
 
-async function insertFoodItems(jsonFoodItems) { 
+async function insertFoodItems(jsonFoodItems, userId) { 
 
     const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
 
     try { 
         await mongoClient.connect();
+        const db = mongoClient.db("ShelfSense");
+        const collection = db.collection("USERS");
+    
 
         for(item of jsonFoodItems) {
             const foodItem = {
@@ -68,12 +71,9 @@ async function insertFoodItems(jsonFoodItems) {
                 unit: item.unit,
                 expirationDate: item.expirationDate
             };
-    
-            const db = mongoClient.db("ShelfSense");
-            const collection = db.collection("USERS");
-    
+
             await collection.updateOne(
-                { username: "ankit.roy" },  // Find the user by their ID
+                { username: userId },  // Find the user by their ID
                 { $push: { pantry: foodItem } }  // Push the foodItem to the pantry array
             );
         }
@@ -86,29 +86,48 @@ async function insertFoodItems(jsonFoodItems) {
 }
 
 
-async function removeFoodItem(foodItem) { 
+async function removeFoodItem(foodItemName, userId) { 
 
     const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
 
     try { 
         await mongoClient.connect();
 
-        for(item of jsonFoodItems) {
-            const foodItem = {
-                foodItem: item.foodItem,
-                quantity: item.quantity,
-                unit: item.unit,
-                expirationDate: item.expirationDate
-            };
-    
-            const db = mongoClient.db("ShelfSense");
-            const collection = db.collection("USERS");
-    
-            await collection.updateOne(
-                { username: "ankit.roy" },  // Find the user by their ID
-                { $push: { pantry: foodItem } }  // Push the foodItem to the pantry array
-            );
-        }
+        const db = mongoClient.db("ShelfSense");
+        const collection = db.collection("USERS");
+
+        // Use $pull to remove the item from the pantry array
+        const result = await collection.updateOne(
+            { username: userId },  // Find the user by their ID
+            { $pull: { pantry: { foodItem: foodItemName } } }  // Remove the foodItem from the pantry
+        );
+
+    } catch (error) {
+        console.error("Error occurred:", error);
+    } finally {
+        await mongoClient.close();  // Ensure the client is closed
+        console.log("Connection closed");
+    }
+}
+
+async function getAllFromPantry(userId) { 
+
+    const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
+
+    try { 
+        await mongoClient.connect();
+
+        const db = mongoClient.db("ShelfSense");
+        const collection = db.collection("USERS");
+
+        // Use $pull to remove the item from the pantry array
+        const user = await collection.findOne(
+            { username: userId }, 
+            { projection: { pantry: 1 } }  // Only return the pantry field
+        );
+
+        return user.pantry || [];
+
     } catch (error) {
         console.error("Error occurred:", error);
     } finally {
@@ -119,8 +138,9 @@ async function removeFoodItem(foodItem) {
 
 
 (async() => {
-    const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
+    // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
 
-    insertFoodItems(jsonObject);
+    // insertFoodItems(jsonObject);
+    console.log(await getAllFromPantry("ankit.roy"));
     // console.log(await getRecipes('apples,peaches,oranges', 5));
 })();
