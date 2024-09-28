@@ -193,6 +193,9 @@ async function checkForExpiring(userId, db) {
 
 }
 
+async function getRecipeFromID(recipeID) {
+}
+
 
 (async() => {
     // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
