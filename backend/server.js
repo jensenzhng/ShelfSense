@@ -1,9 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, getAllFromPantry } = require('./main');
+const { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, getAllFromPantry, checkForExpiring } = require('./main');
 const { MongoClient } = require('mongodb');
 const cors = require('cors');
 require('dotenv').config();
+const cron = require('node-cron');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -114,4 +115,9 @@ connectToMongoDB().then(() => {
     console.log(`Server is running on port ${PORT}`);
   });
 });
+
+cron.schedule('0 19 * * *', () => {
+  checkForExpiring("ankit.roy", db);
+});
+
 

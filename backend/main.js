@@ -1,9 +1,20 @@
 const axios = require('axios');
 require('dotenv').config();
 const OpenAI = require('openai');
+const { MongoClient } = require('mongodb');
+const cron = require('node-cron');
+const nodemailer = require('nodemailer');
 
 const SPOONACULAR_API_KEY= process.env.SPOONACULAR_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,  // your Gmail address
+        pass: process.env.EMAIL_PASS   // your Gmail password or app-specific password
+    }
+});
 
 const gptClient = new OpenAI({
     apiKey: OPENAI_API_KEY, // This is the default and can be omitted
@@ -112,13 +123,90 @@ async function getAllFromPantry(userId, db) {
     } 
 }
 
+async function checkForExpiring(userId, db) {
 
-// (async() => {
-//     // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
+    try {
+        const collection = db.collection("USERS");
 
-//     // insertFoodItems(jsonObject);
-//     console.log(await getAllFromPantry("ankit.roy"));
-//     // console.log(await getRecipes('apples,peaches,oranges', 5));
-// })();
+        const currentDate = new Date();
+        const thresholdDate = new Date();
+        thresholdDate.setDate(currentDate.getDate() + 3);
 
-module.exports = { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, getAllFromPantry };
+        const user = await collection.findOne(
+            { username: userId }, 
+            { projection: { pantry: 1, email: 1} } // Retrieve pantry, email
+        );
+
+        if (!user || !user.pantry) {
+            console.log(`User with username ${userId} not found or no pantry data.`);
+            return;
+        }
+
+        const expiringItems = user.pantry.filter(item => {
+            const itemExpirationDate = new Date(item.expirationDate); // Convert string to Date object
+            return itemExpirationDate <= thresholdDate && itemExpirationDate >= currentDate; // Expiring soon
+        });
+
+        const expiredItems = user.pantry.filter(item => {
+            const itemExpirationDate = new Date(item.expirationDate); // Convert string to Date object
+            return itemExpirationDate < currentDate; // Already expired
+        });
+
+        if (expiringItems.length === 0 && expiredItems.length === 0) {
+            console.log(`No expiring or expired items for user: ${userId}`);
+            return;
+        }
+
+        let emailText = `Hello ${userId},\n\n`;
+        if (expiringItems.length > 0) {
+            const expiringList = expiringItems.map(item => `${item.foodItem} (expires on ${item.expirationDate})`).join('\n');
+            emailText += `The following food items in your pantry are expiring soon:\n\n${expiringList}\n\n`;
+        }
+
+        if (expiredItems.length > 0) {
+            const expiredList = expiredItems.map(item => `${item.foodItem} (expired on ${item.expirationDate})`).join('\n');
+            emailText += `The following food items have already expired:\n\n${expiredList}\n\n`;
+        }
+
+        emailText += `Best,\nShelfSense`;
+
+        // Construct email content
+        const foodList = expiringItems.map(item => `${item.foodItem} (expires on ${item.expirationDate})`).join('\n');
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: user.email,  // User's email address
+            subject: 'Food Expiration Reminder',
+            text: emailText
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                return console.log('Error occurred:', error);
+            }
+            console.log('Email sent successfully:', info.response);
+        });
+        console.log(`Expiration email sent to ${user.email}`);
+
+    } catch (error) {
+        console.error("Error occurred during expiration check:", error);
+    }
+
+}
+
+
+(async() => {
+    // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
+
+    // insertFoodItems(jsonObject);
+    //console.log(await getAllFromPantry("ankit.roy"));
+    // console.log(await getRecipes('apples,peaches,oranges', 5));
+    
+    // const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
+    // await mongoClient.connect();
+    // console.log('Connected to MongoDB');
+    // db = mongoClient.db("ShelfSense");
+    // await checkForExpiring("ankit.roy", db);
+    // mongoClient.close();
+})();
+
+module.exports = { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, getAllFromPantry, checkForExpiring };
