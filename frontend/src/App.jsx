@@ -16,8 +16,16 @@ function ShelfSense() {
                 const response = await axios.get(
                     "http://localhost:3000/pantry?userId=ankit.roy"
                 );
-                // Assuming response data is an array of pantry items
-                setIngredients(response.data);
+
+                // Assuming response.data is an array of pantry items with an 'expirationDate' field in 'mm/dd/yyyy' format
+                const sortedIngredients = response.data.sort((a, b) => {
+                    const dateA = new Date(a.expirationDate);
+                    const dateB = new Date(b.expirationDate);
+                    return dateA - dateB; // Sort in ascending order, the closest expiration date first
+                });
+
+                // Set the sorted ingredients
+                setIngredients(sortedIngredients);
             } catch (error) {
                 console.error("Error fetching pantry data:", error);
             }
@@ -32,111 +40,116 @@ function ShelfSense() {
     const [isListening, setIsListening] = useState(false);
 
     const handleTranscriptAdd = async () => {
-        if (transcript.trim() !== "") {
-            try {
-                // Send the transcript to the server for interpretation
-                const response = await axios.post(
-                    "http://localhost:3000/interpret-voice",
-                    {
-                        speechInput: transcript,
-                    }
-                );
-
-                if (response.status === 200) {
-                    console.log("Interpreted data:", response.data);
-                    const interpretedItems = response.data; // Expecting an array of objects
-
-                    // Update the ingredients list with all the interpreted items
-                    const newIngredients = interpretedItems.map((item) => ({
-                        foodItem: item.foodItem,
-                        quantity: item.quantity,
-                        unit: item.unit,
-                        expirationDate: item.expirationDate,
-                    }));
-
-                    const response2 = await axios.post(
-                        "http://localhost:3000/pantry",
-                        {
-                            userId: "ankit.roy", // Replace this with dynamic userId if needed
-                            foodItems: newIngredients, // Send newIngredient as an array
-                        }
-                    );
-
-                    if (response2.status === 200) {
-                        console.log(
-                            "Food item added successfully:",
-                            response2.data
-                        );
-                        setIngredients((prevIngredients) => [
-                            ...prevIngredients,
-                            ...newIngredients,
-                        ]);
-                        reset(); // Reset the transcript after adding
-                    } else {
-                        console.error(
-                            "Failed to add the food item:",
-                            response2.data
-                        );
-                    }
-                } else {
-                    console.error("Failed to interpret voice:", response.data);
-                }
-            } catch (error) {
-                console.error("Error interpreting voice:", error);
-            }
-        }
-    };
+      if (transcript.trim() !== "") {
+          try {
+              const response = await axios.post(
+                  "http://localhost:3000/interpret-voice",
+                  {
+                      speechInput: transcript,
+                  }
+              );
+  
+              if (response.status === 200) {
+                  console.log("Interpreted data:", response.data);
+                  const interpretedItems = response.data;
+  
+                  const newIngredients = interpretedItems.map((item) => ({
+                      foodItem: item.foodItem,
+                      quantity: item.quantity,
+                      unit: item.unit,
+                      expirationDate: item.expirationDate,
+                  }));
+  
+                  const response2 = await axios.post(
+                      "http://localhost:3000/pantry",
+                      {
+                          userId: "ankit.roy",
+                          foodItems: newIngredients,
+                      }
+                  );
+  
+                  if (response2.status === 200) {
+                      console.log("Food item added successfully:", response2.data);
+  
+                      // Sort the ingredients by expiration date after adding
+                      const updatedIngredients = [
+                          ...ingredients,
+                          ...newIngredients,
+                      ].sort((a, b) => {
+                          const dateA = new Date(a.expirationDate);
+                          const dateB = new Date(b.expirationDate);
+                          return dateA - dateB;
+                      });
+  
+                      // Update the state with sorted ingredients
+                      setIngredients(updatedIngredients);
+                      reset(); // Reset the transcript after adding
+                  } else {
+                      console.error("Failed to add the food item:", response2.data);
+                  }
+              } else {
+                  console.error("Failed to interpret voice:", response.data);
+              }
+          } catch (error) {
+              console.error("Error interpreting voice:", error);
+          }
+      }
+  };
+  
 
     const handleAdd = async () => {
-        if (
-            inputValue.trim() !== "" &&
-            quantity.trim() !== "" &&
-            unit.trim() !== "" &&
-            expirationDate.trim() !== ""
-        ) {
-            let date = new Date(expirationDate);
-            const formattedDate = `${date.getMonth() + 1}/${
-                date.getDate() + 1
-            }/${date.getFullYear()}`;
-
-            const newIngredient = {
-                foodItem: inputValue,
-                quantity,
-                expirationDate: formattedDate, // corrected key to match schema
-                unit,
-            };
-
-            try {
-                // Make a POST request to the server to add the new ingredient
-                const response = await axios.post(
-                    "http://localhost:3000/pantry",
-                    {
-                        userId: "ankit.roy", // Replace this with dynamic userId if needed
-                        foodItems: [newIngredient], // Send newIngredient as an array
-                    }
-                );
-
-                if (response.status === 200) {
-                    console.log("Food item added successfully:", response.data);
-                    // Update local state only if the post request was successful
-                    setIngredients([...ingredients, newIngredient]);
-                } else {
-                    console.error(
-                        "Failed to add the food item:",
-                        response.data
-                    );
-                }
-            } catch (error) {
-                console.error("Error adding food item:", error);
-            }
-
-            // Clear the input fields after adding
-            setUnit("");
-            setInputValue("");
-            setQuantity("");
-            setExpirationDate("");
-        }
-    };
+      if (
+          inputValue.trim() !== "" &&
+          quantity.trim() !== "" &&
+          unit.trim() !== "" &&
+          expirationDate.trim() !== ""
+      ) {
+          let date = new Date(expirationDate);
+          const formattedDate = `${date.getMonth() + 1}/${date.getDate() + 1}/${date.getFullYear()}`;
+  
+          const newIngredient = {
+              foodItem: inputValue,
+              quantity,
+              expirationDate: formattedDate,
+              unit,
+          };
+  
+          try {
+              const response = await axios.post(
+                  "http://localhost:3000/pantry",
+                  {
+                      userId: "ankit.roy",
+                      foodItems: [newIngredient],
+                  }
+              );
+  
+              if (response.status === 200) {
+                  console.log("Food item added successfully:", response.data);
+  
+                  // Sort the ingredients by expiration date after adding
+                  const updatedIngredients = [...ingredients, newIngredient].sort((a, b) => {
+                      const dateA = new Date(a.expirationDate);
+                      const dateB = new Date(b.expirationDate);
+                      return dateA - dateB;
+                  });
+  
+                  // Update the state with sorted ingredients
+                  setIngredients(updatedIngredients);
+              } else {
+                  console.error("Failed to add the food item:", response.data);
+              }
+          } catch (error) {
+              console.error("Error adding food item:", error);
+          }
+  
+          // Clear the input fields after adding
+          setUnit("");
+          setInputValue("");
+          setQuantity("");
+          setExpirationDate("");
+      }
+  };
+  
 
     const handleDelete = async (index) => {
         const foodItemToDelete = ingredients[index].foodItem; // Get the foodItem from the ingredient
@@ -252,7 +265,63 @@ function ShelfSense() {
             )}
 
             <div className="space-y-3 w-full max-w-2xl mt-4">
-                {ingredients.map((ingredient, index) => (
+                {
+                  ingredients.map((ingredient, index) => {
+                    const expirationDate = new Date(ingredient.expirationDate);
+                    const today = new Date();
+                    const threeDaysFromNow = new Date();
+                    threeDaysFromNow.setDate(today.getDate() + 3);
+                
+                    // Determine the border color
+                    const borderColor = expirationDate < today 
+                        ? "border-red-500" // Expired
+                        : expirationDate <= threeDaysFromNow 
+                        ? "border-yellow-500" // Expiring in the next 3 days
+                        : "border-gray-300"; // Otherwise gray
+                
+                    return (
+                        <div
+                            key={index}
+                            className={`flex justify-between items-center border ${borderColor} rounded-lg p-3`}
+                        >
+                                 <span className="text-gray-700">
+                            {ingredient.quantity} {ingredient.unit}{" "}
+                            {ingredient.foodItem} - expires on{" "}
+                            {ingredient.expirationDate}
+                        </span>
+                        <button
+                            onClick={() => handleDelete(index)}
+                            className="p-2"
+                            aria-label="Delete item"
+                        >
+                            <svg
+                                fill="#000000"
+                                version="1.1"
+                                xmlns="http://www.w3.org/2000/svg"
+                                xmlnsXlink="http://www.w3.org/1999/xlink"
+                                width="24px"
+                                height="24px"
+                                viewBox="0 0 41.336 41.336"
+                                xmlSpace="preserve"
+                            >
+                                <g>
+                                    <path
+                                        d="M36.335,5.668h-8.167V1.5c0-0.828-0.672-1.5-1.5-1.5h-12c-0.828,0-1.5,0.672-1.5,1.5v4.168H5.001c-1.104,0-2,0.896-2,2
+                    s0.896,2,2,2h2.001v29.168c0,1.381,1.119,2.5,2.5,2.5h22.332c1.381,0,2.5-1.119,2.5-2.5V9.668h2.001c1.104,0,2-0.896,2-2
+                    S37.438,5.668,36.335,5.668z M14.168,35.67c0,0.828-0.672,1.5-1.5,1.5s-1.5-0.672-1.5-1.5v-21c0-0.828,0.672-1.5,1.5-1.5
+                    s1.5,0.672,1.5,1.5V35.67z M22.168,35.67c0,0.828-0.672,1.5-1.5,1.5s-1.5-0.672-1.5-1.5v-21c0-0.828,0.672-1.5,1.5-1.5
+                    s1.5,0.672,1.5,1.5V35.67z M25.168,5.668h-9V3h9V5.668z M30.168,35.67c0,0.828-0.672,1.5-1.5,1.5s-1.5-0.672-1.5-1.5v-21
+                    c0-0.828,0.672-1.5,1.5-1.5s1.5,0.672,1.5,1.5V35.67z"
+                                    />
+                                </g>
+                            </svg>
+                        </button>
+                        </div>
+                    );
+                })
+                
+                }
+                {/* {ingredients.map((ingredient, index) => (
                     <div
                         key={index}
                         className="flex justify-between items-center border border-gray-300 rounded-lg p-3"
@@ -290,7 +359,7 @@ function ShelfSense() {
                             </svg>
                         </button>
                     </div>
-                ))}
+                ))} */}
             </div>
         </div>
     );
