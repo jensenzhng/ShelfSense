@@ -24,8 +24,8 @@ async function interpretVoice(speechInput) {
     const formattedDate = `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`;
 
     const stream = await gptClient.chat.completions.create({
-        messages: [{ role: 'user', content: 'I will give you a phrase containing a food item, quanity, unit, and an expiration date.' + 
-            'If there is no expiration date, make an estimation. If no explicit units, write "count". The current date is ' + formattedDate +
+        messages: [{ role: 'user', content: 'I will give you a phrase containing a food item, quantity, unit, and an expiration date.' + 
+            'If there is no expiration date, make an estimation of the approximate expiration date of that food. If no explicit units, write "count". The current date is ' + formattedDate +
             '. Return ONLY a JSON Array with a JSON object for each food in the format: [{"foodItem": <String>, "quantity": <Int>, "unit": <String>, "expirationDate": <mm/dd/yyyy>}]. ' +
             'Here is the phrase: ' + speechInput }],
         model: 'gpt-3.5-turbo',
@@ -55,7 +55,6 @@ async function interpretVoice(speechInput) {
 }
 
 async function insertFoodItems(jsonFoodItems, userId) { 
-
     const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
 
     try { 
@@ -137,10 +136,12 @@ async function getAllFromPantry(userId) {
 }
 
 
-(async() => {
-    // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
+// (async() => {
+//     // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
 
-    // insertFoodItems(jsonObject);
-    console.log(await getAllFromPantry("ankit.roy"));
-    // console.log(await getRecipes('apples,peaches,oranges', 5));
-})();
+//     // insertFoodItems(jsonObject);
+//     console.log(await getAllFromPantry("ankit.roy"));
+//     // console.log(await getRecipes('apples,peaches,oranges', 5));
+// })();
+
+module.exports = { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, getAllFromPantry };
