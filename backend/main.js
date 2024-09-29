@@ -28,6 +28,13 @@ async function getRecipes(ingredients, numberOfRecipes) {
   return response.data;
 }
 
+async function getRecipeFromID(recipeID) {
+    const url = `https://api.spoonacular.com/recipes/${recipeID}/information?apiKey=${SPOONACULAR_API_KEY}`;
+
+    const response = await axios.get(url);
+    return response.data;
+}
+
 async function interpretVoice(speechInput) {
 
     const now = new Date();
@@ -83,6 +90,25 @@ async function insertFoodItems(jsonFoodItems, userId, db) {
                 { $push: { pantry: foodItem } }  // Push the foodItem to the pantry array
             );
         }
+    } catch (error) {
+        console.error("Error occurred:", error);
+    } 
+}
+
+async function updateFoodItem(userId, foodName, updatedItem, db) { 
+    try { 
+        const collection = db.collection("USERS");
+
+        await collection.updateOne(
+            { username: userId, "pantry.foodItem": foodName },  // Find the user and the specific food item
+            { 
+                $set: { 
+                    "pantry.$.quantity": updatedItem.quantity,
+                    "pantry.$.unit": updatedItem.unit,
+                    "pantry.$.expirationDate": updatedItem.expirationDate 
+                } 
+            }  // Use the $ positional operator to update the matching food item
+        );
     } catch (error) {
         console.error("Error occurred:", error);
     } 
@@ -157,18 +183,37 @@ async function checkForExpiring(userId, db) {
             return;
         }
 
-        let emailText = `Hello ${userId},\n\n`;
+        let emailText = `<p>Hello ${userId},</p>`;
+
         if (expiringItems.length > 0) {
-            const expiringList = expiringItems.map(item => `${item.foodItem} (expires on ${item.expirationDate})`).join('\n');
-            emailText += `The following food items in your pantry are expiring soon:\n\n${expiringList}\n\n`;
+            emailText += `<p>The following food items in your pantry are expiring soon:</p><ul>`;
+            expiringItems.forEach(item => {
+                emailText += `<li>${item.foodItem} (expires on ${item.expirationDate})</li><br>`;
+            });
+            emailText += `</ul>`;
+
+            const ingredients = expiringItems.map(item => item.foodItem).join(',');
+            const recipes = await getRecipes(ingredients, 3);
+
+            if (recipes.length > 0) {
+                emailText += `<p>Here are some recipe suggestions using your expiring items:</p><ul>`;
+                recipes.forEach((recipe) => {
+                    emailText += `<li>${recipe.title}<br>`;
+                    emailText += `<img src="${recipe.image}" alt="${recipe.title}" style="width:100px;height:100px;"></li><br>`;
+                });
+                emailText += `</ul>`;
+            }  
         }
 
         if (expiredItems.length > 0) {
-            const expiredList = expiredItems.map(item => `${item.foodItem} (expired on ${item.expirationDate})`).join('\n');
-            emailText += `The following food items have already expired:\n\n${expiredList}\n\n`;
+            emailText += `<p>The following food items have already expired:</p><ul>`;
+            expiredItems.forEach(item => {
+                emailText += `<li>${item.foodItem} (expired on ${item.expirationDate})</li>`;
+            });
+            emailText += `</ul>`;
         }
 
-        emailText += `Best,\nShelfSense`;
+        emailText += `<p>Best,<br>ShelfSense</p>`;
 
         // Construct email content
         const foodList = expiringItems.map(item => `${item.foodItem} (expires on ${item.expirationDate})`).join('\n');
@@ -176,7 +221,7 @@ async function checkForExpiring(userId, db) {
             from: process.env.EMAIL_USER,
             to: user.email,  // User's email address
             subject: 'Food Expiration Reminder',
-            text: emailText
+            html: emailText
         };
 
         transporter.sendMail(mailOptions, (error, info) => {
@@ -201,12 +246,13 @@ async function checkForExpiring(userId, db) {
     //console.log(await getAllFromPantry("ankit.roy"));
     // console.log(await getRecipes('apples,peaches,oranges', 5));
     
-    // const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
-    // await mongoClient.connect();
-    // console.log('Connected to MongoDB');
-    // db = mongoClient.db("ShelfSense");
-    // await checkForExpiring("ankit.roy", db);
-    // mongoClient.close();
+    const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
+    await mongoClient.connect();
+    console.log('Connected to MongoDB');
+    db = mongoClient.db("ShelfSense");
+    await checkForExpiring("ankit.roy", db);
+    mongoClient.close();
 })();
 
-module.exports = { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, getAllFromPantry, checkForExpiring };
+module.exports = { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, 
+    getAllFromPantry, checkForExpiring, getRecipeFromID, updateFoodItem };
