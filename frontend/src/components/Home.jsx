@@ -2,6 +2,10 @@ import { useState } from "react";
 import { useVoiceToText } from "react-speakup";
 import axios from "axios";
 import { useEffect } from "react";
+import { FaMicrophone } from "react-icons/fa";
+import { FaStopCircle } from "react-icons/fa";
+import { VscDebugRestart } from "react-icons/vsc";
+import { IoAddSharp } from "react-icons/io5";
 
 function ShelfSense() {
     const [inputValue, setInputValue] = useState("");
@@ -309,15 +313,17 @@ function ShelfSense() {
                     />
                     <button
                         onClick={handleAdd}
-                        className="bg-[#386c5f] text-white px-4 py-2 rounded-lg"
+                        className="bg-[#386c5f] text-white px-4 py-2 rounded-lg text-align align-middle"
                     >
-                        Add
+                        <IoAddSharp size={20} />
                     </button>
                 </div>
 
-                <div className="flex items-center justify-center w-full max-w-2xl my-2">
+                <div className="flex items-center justify-center w-full max-w-2xl">
                     <hr className="border-gray-300 w-full" />
-                    <span className="px-2 text-gray-500">or</span>
+                    <p className="px-2 text-gray-500 w-[600px] text-center">
+                        or tell me your ingredients
+                    </p>
                     <hr className="border-gray-300 w-full" />
                 </div>
 
@@ -328,32 +334,41 @@ function ShelfSense() {
                             isListening ? "bg-red-500" : "bg-gray-400"
                         }`}
                     >
-                        {isListening ? "Stop Recording" : "Start Recording"}
+                        {isListening ? <FaStopCircle /> : <FaMicrophone />}
                     </button>
 
                     <button
                         onClick={reset}
                         className="bg-yellow-500 text-white px-4 py-2 rounded-lg"
                     >
-                        Reset Transcript
+                        <VscDebugRestart />
                     </button>
 
                     <button
                         onClick={handleTranscriptAdd}
                         className="bg-[#386c5f] text-white px-4 py-2 rounded-lg"
                     >
-                        Add
+                        <IoAddSharp size={20} />
                     </button>
                 </div>
 
-                {transcript && (
-                    <div className="max-w-2xl mt-2">
-                        <span>
-                            <strong>You said:</strong>
-                        </span>
-                        <span className="mt-4 text-gray-700">
-                            {transcript}
-                        </span>
+                {(
+                    <div className="max-w-2xl w-full mt-2">
+                        <label
+                            htmlFor="transcriptTextarea"
+                            className="block text-sm font-medium text-gray-700"
+                        >
+                            You said:
+                        </label>
+                        <textarea
+                            id="transcriptTextarea"
+                            className="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm resize-none"
+                            value={transcript} // Bind the value to the transcript
+                            rows={3} // Set an initial number of rows
+                            disabled // Make the textarea field disabled
+                            readOnly // Ensure it is truly read-only
+                            placeholder='"I have 3 chicken breasts, a gallon of milk, 1 dozen eggs..."'
+                        />
                     </div>
                 )}
 
