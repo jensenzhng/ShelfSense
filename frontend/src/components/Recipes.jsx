@@ -94,52 +94,58 @@ const Recipes = () => {
                     pantry.
                 </p>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {recipes.map((recipe) => (
                         <div
                             key={recipe.id}
-                            className="border p-4 rounded shadow-md cursor-pointer"
+                            className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 cursor-pointer"
                             onClick={() => openModal(recipe.id)} // Open modal when clicked
                         >
-                            <h2 className="text-xl font-semibold mb-2">
-                                {recipe.title}
-                            </h2>
                             <img
                                 src={recipe.image}
                                 alt={recipe.title}
-                                className="w-full h-40 object-cover mb-2"
+                                className="w-full object-cover"
                             />
-                            <div className="text-sm mb-2">
-                                <strong>Used Ingredients:</strong>
-                                <ul className="list-disc pl-4">
-                                    {recipe.usedIngredients.map(
-                                        (ingredient) => (
-                                            <li key={ingredient.id}>
-                                                {ingredient.amount}{" "}
-                                                {ingredient.unitShort}{" "}
-                                                {ingredient.name}
-                                            </li>
-                                        )
-                                    )}
-                                </ul>
+                            <div className="p-4">
+                                <h2 className="text-lg font-bold mb-3 text-gray-800">
+                                    {recipe.title}
+                                </h2>
+                                <div className="text-sm mb-4">
+                                    <strong className="text-gray-700">
+                                        Ingredients you have:
+                                    </strong>
+                                    <ul className="list-disc pl-5 text-gray-600 mt-2">
+                                        {recipe.usedIngredients.map(
+                                            (ingredient) => (
+                                                <li key={ingredient.id}>
+                                                    {ingredient.amount}{" "}
+                                                    {ingredient.unitShort}{" "}
+                                                    {ingredient.name}
+                                                </li>
+                                            )
+                                        )}
+                                    </ul>
+                                </div>
+                                <div className="text-sm mb-4">
+                                    <strong className="text-gray-700">
+                                        Missing Ingredients:
+                                    </strong>
+                                    <ul className="list-disc pl-5 text-gray-600 mt-2">
+                                        {recipe.missedIngredients.map(
+                                            (ingredient) => (
+                                                <li key={ingredient.id}>
+                                                    {ingredient.amount}{" "}
+                                                    {ingredient.unitShort}{" "}
+                                                    {ingredient.name}
+                                                </li>
+                                            )
+                                        )}
+                                    </ul>
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                    Likes: {recipe.likes}
+                                </p>
                             </div>
-                            <div className="text-sm mb-2">
-                                <strong>Missed Ingredients:</strong>
-                                <ul className="list-disc pl-4">
-                                    {recipe.missedIngredients.map(
-                                        (ingredient) => (
-                                            <li key={ingredient.id}>
-                                                {ingredient.amount}{" "}
-                                                {ingredient.unitShort}{" "}
-                                                {ingredient.name}
-                                            </li>
-                                        )
-                                    )}
-                                </ul>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                                Likes: {recipe.likes}
-                            </p>
                         </div>
                     ))}
                 </div>
