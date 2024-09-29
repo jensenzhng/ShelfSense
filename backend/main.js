@@ -239,20 +239,20 @@ async function checkForExpiring(userId, db) {
 }
 
 
-(async() => {
-    // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
+// (async() => {
+//     // const jsonObject = await interpretVoice('3 apples, a can of tomato soup, 5 cloves of garlic, a pint of milk');
 
-    // insertFoodItems(jsonObject);
-    //console.log(await getAllFromPantry("ankit.roy"));
-    // console.log(await getRecipes('apples,peaches,oranges', 5));
+//     // insertFoodItems(jsonObject);
+//     //console.log(await getAllFromPantry("ankit.roy"));
+//     // console.log(await getRecipes('apples,peaches,oranges', 5));
     
-    const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
-    await mongoClient.connect();
-    console.log('Connected to MongoDB');
-    db = mongoClient.db("ShelfSense");
-    await checkForExpiring("ankit.roy", db);
-    mongoClient.close();
-})();
+//     const mongoClient = new MongoClient(process.env.MONGO_CONNECTION);
+//     await mongoClient.connect();
+//     console.log('Connected to MongoDB');
+//     db = mongoClient.db("ShelfSense");
+//     await checkForExpiring("ankit.roy", db);
+//     mongoClient.close();
+// })();
 
 module.exports = { getRecipes, interpretVoice, insertFoodItems, removeFoodItem, 
     getAllFromPantry, checkForExpiring, getRecipeFromID, updateFoodItem };

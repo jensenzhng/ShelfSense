@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useVoiceToText } from "react-speakup";
 import axios from "axios";
 import { useEffect } from "react";
-import Header from "./Header";
 
 function ShelfSense() {
     const [inputValue, setInputValue] = useState("");
@@ -10,6 +9,13 @@ function ShelfSense() {
     const [unit, setUnit] = useState("");
     const [expirationDate, setExpirationDate] = useState("");
     const [ingredients, setIngredients] = useState([]);
+    const [editIndex, setEditIndex] = useState(null); // Track which ingredient is being edited
+    const [editValue, setEditValue] = useState({
+        foodItem: "",
+        quantity: "",
+        unit: "",
+        expirationDate: "",
+    });
 
     useEffect(() => {
         const fetchPantryData = async () => {
@@ -194,6 +200,72 @@ function ShelfSense() {
         }
     };
 
+    const handleEditClick = (index) => {
+        const ingredientToEdit = ingredients[index];
+        const expirationDate = new Date(ingredientToEdit.expirationDate);
+        const formattedExpirationDate = expirationDate
+            .toISOString()
+            .split("T")[0]; // Convert to YYYY-MM-DD format
+
+        setEditIndex(index);
+        setEditValue({
+            foodItem: ingredientToEdit.foodItem,
+            quantity: ingredientToEdit.quantity,
+            unit: ingredientToEdit.unit,
+            expirationDate: formattedExpirationDate, // Set formatted date
+        });
+    };
+
+    const handleEditChange = (e) => {
+        setEditValue({
+            ...editValue,
+            [e.target.name]: e.target.value,
+        });
+    };
+
+    const handleSaveEdit = async (index) => {
+        const ingredientToEdit = ingredients[index];
+
+        const updatedItem = {
+            foodItem: editValue.foodItem,
+            quantity: editValue.quantity,
+            unit: editValue.unit,
+            expirationDate: editValue.expirationDate,
+        };
+
+        try {
+            const response = await axios.post(
+                "http://localhost:3000/editPantry",
+                {
+                    userId: "ankit.roy", // Replace with dynamic userId if needed
+                    foodName: ingredientToEdit.foodItem,
+                    updatedItem,
+                }
+            );
+
+            if (response.status === 200) {
+                console.log("Food item updated successfully:", response.data);
+
+                // Update the ingredients list with the updated item
+                const updatedIngredients = ingredients.map((ingredient, i) =>
+                    i === index ? updatedItem : ingredient
+                );
+
+                updatedIngredients.sort((a, b) => {
+                    const dateA = new Date(a.expirationDate);
+                    const dateB = new Date(b.expirationDate);
+                    return dateA - dateB; // Sort in ascending order, the closest expiration date first
+                });
+                setIngredients(updatedIngredients);
+                setEditIndex(null); // Exit edit mode
+            } else {
+                console.error("Failed to update the food item:", response.data);
+            }
+        } catch (error) {
+            console.error("Error updating food item:", error);
+        }
+    };
+
     const handleMicrophoneClick = () => {
         if (isListening) {
             stopListening();
@@ -237,7 +309,7 @@ function ShelfSense() {
                     />
                     <button
                         onClick={handleAdd}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+                        className="bg-[#386c5f] text-white px-4 py-2 rounded-lg"
                     >
                         Add
                     </button>
@@ -252,8 +324,8 @@ function ShelfSense() {
                 <div className="flex space-x-2 mt-4">
                     <button
                         onClick={handleMicrophoneClick}
-                        className={`bg-gray-500 text-white px-4 py-2 rounded-lg ${
-                            isListening ? "bg-red-500" : ""
+                        className={`text-white px-4 py-2 rounded-lg ${
+                            isListening ? "bg-red-500" : "bg-gray-400"
                         }`}
                     >
                         {isListening ? "Stop Recording" : "Start Recording"}
@@ -268,14 +340,21 @@ function ShelfSense() {
 
                     <button
                         onClick={handleTranscriptAdd}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+                        className="bg-[#386c5f] text-white px-4 py-2 rounded-lg"
                     >
                         Add
                     </button>
                 </div>
 
                 {transcript && (
-                    <p className="mt-4 text-gray-700">You said: {transcript}</p>
+                    <div className="max-w-2xl mt-2">
+                        <span>
+                            <strong>You said:</strong>
+                        </span>
+                        <span className="mt-4 text-gray-700">
+                            {transcript}
+                        </span>
+                    </div>
                 )}
 
                 <div className="space-y-3 w-full max-w-2xl mt-4">
@@ -287,88 +366,140 @@ function ShelfSense() {
                         const threeDaysFromNow = new Date();
                         threeDaysFromNow.setDate(today.getDate() + 3);
 
-                        // Calculate the number of days from or until expiration
                         const timeDifference =
                             expirationDate.getTime() - today.getTime();
                         const daysDifference = Math.ceil(
                             timeDifference / (1000 * 3600 * 24)
-                        ); // Convert milliseconds to days
+                        );
 
-                        // Determine the border color
                         const borderColor =
                             expirationDate < today
-                                ? "border-red-500" // Expired
+                                ? "border-red-500"
                                 : expirationDate <= threeDaysFromNow
-                                ? "border-yellow-500" // Expiring in the next 3 days
-                                : "border-gray-300"; // Otherwise gray
+                                ? "border-yellow-500"
+                                : "border-gray-300";
 
                         return (
                             <div
                                 key={index}
                                 className={`flex justify-between items-center border border-2 ${borderColor} rounded-lg p-3`}
                             >
-                                <div>
-                                    <p className="text-[#212427] font-bold text-base md:text-lg">
-                                        {ingredient.foodItem
-                                            .charAt(0)
-                                            .toUpperCase() +
-                                            ingredient.foodItem.slice(1)}
-                                    </p>
-                                    <p className="text-gray-500 text-sm md:text-base">
-                                        {ingredient.quantity} {ingredient.unit}{" "}
-                                        • Expires {ingredient.expirationDate}
-                                        {/* Conditional rendering based on expiration status */}
-                                        {expirationDate < today && (
-                                            <span className="text-red-600">
-                                                {" "}
-                                                (expired{" "}
-                                                {Math.abs(daysDifference)}{" "}
-                                                {Math.abs(daysDifference) === 1
-                                                    ? "day"
-                                                    : "days"}{" "}
-                                                ago)
-                                            </span>
-                                        )}
-                                        {expirationDate <= threeDaysFromNow &&
-                                            expirationDate >= today && (
-                                                <span className="text-yellow-600">
+                                {editIndex === index ? (
+                                    <div className="flex flex-col space-y-2">
+                                        <p className="text-[#212427] font-bold text-base md:text-lg">
+                                            {ingredient.foodItem
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                                ingredient.foodItem.slice(1)}
+                                        </p>
+                                        <input
+                                            type="number"
+                                            name="quantity"
+                                            className="border border-gray-300 rounded-lg p-2 w-24"
+                                            value={editValue.quantity}
+                                            onChange={handleEditChange}
+                                        />
+                                        <input
+                                            type="text"
+                                            name="unit"
+                                            className="border border-gray-300 rounded-lg p-2 w-16"
+                                            value={editValue.unit}
+                                            onChange={handleEditChange}
+                                        />
+                                        <input
+                                            type="date"
+                                            name="expirationDate"
+                                            className="border border-gray-300 rounded-lg p-2 w-48"
+                                            value={editValue.expirationDate}
+                                            onChange={handleEditChange}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <p className="text-[#212427] font-bold text-base md:text-lg">
+                                            {ingredient.foodItem
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                                ingredient.foodItem.slice(1)}
+                                        </p>
+                                        <p className="text-gray-500 text-sm md:text-base">
+                                            {ingredient.quantity}{" "}
+                                            {ingredient.unit} • Expires{" "}
+                                            {ingredient.expirationDate}
+                                            {expirationDate < today && (
+                                                <span className="text-red-600">
                                                     {" "}
-                                                    (in {daysDifference}{" "}
-                                                    {daysDifference === 1
+                                                    (expired{" "}
+                                                    {Math.abs(
+                                                        daysDifference
+                                                    )}{" "}
+                                                    {Math.abs(
+                                                        daysDifference
+                                                    ) === 1
                                                         ? "day"
-                                                        : "days"}
-                                                    )
+                                                        : "days"}{" "}
+                                                    ago)
                                                 </span>
                                             )}
-                                    </p>
+                                            {expirationDate <=
+                                                threeDaysFromNow &&
+                                                expirationDate >= today && (
+                                                    <span className="text-yellow-600">
+                                                        {" "}
+                                                        (in {
+                                                            daysDifference
+                                                        }{" "}
+                                                        {daysDifference === 1
+                                                            ? "day"
+                                                            : "days"}
+                                                        )
+                                                    </span>
+                                                )}
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div className="flex space-x-2">
+                                    {editIndex === index ? (
+                                        <>
+                                            <button
+                                                onClick={() =>
+                                                    handleSaveEdit(index)
+                                                }
+                                                className="bg-green-500 text-white px-4 py-2 rounded-lg"
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    setEditIndex(null)
+                                                }
+                                                className="bg-red-500 text-white px-4 py-2 rounded-lg"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button
+                                                onClick={() =>
+                                                    handleEditClick(index)
+                                                }
+                                                className="bg-[#72b7d6] text-white px-4 py-2 rounded-lg"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    handleDelete(index)
+                                                }
+                                                className="bg-red-500 text-white px-4 py-2 rounded-lg"
+                                            >
+                                                Delete
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
-                                <button
-                                    onClick={() => handleDelete(index)}
-                                    className="p-2"
-                                    aria-label="Delete item"
-                                >
-                                                                        <svg
-                                        fill="#000000"
-                                        version="1.1"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        xmlnsXlink="http://www.w3.org/1999/xlink"
-                                        width="20px"
-                                        height="20px"
-                                        viewBox="0 0 41.336 41.336"
-                                        xmlSpace="preserve"
-                                    >
-                                        <g>
-                                            <path
-                                                d="M36.335,5.668h-8.167V1.5c0-0.828-0.672-1.5-1.5-1.5h-12c-0.828,0-1.5,0.672-1.5,1.5v4.168H5.001c-1.104,0-2,0.896-2,2
-                    s0.896,2,2,2h2.001v29.168c0,1.381,1.119,2.5,2.5,2.5h22.332c1.381,0,2.5-1.119,2.5-2.5V9.668h2.001c1.104,0,2-0.896,2-2
-                    S37.438,5.668,36.335,5.668z M14.168,35.67c0,0.828-0.672,1.5-1.5,1.5s-1.5-0.672-1.5-1.5v-21c0-0.828,0.672-1.5,1.5-1.5
-                    s1.5,0.672,1.5,1.5V35.67z M22.168,35.67c0,0.828-0.672,1.5-1.5,1.5s-1.5-0.672-1.5-1.5v-21c0-0.828,0.672-1.5,1.5-1.5
-                    s1.5,0.672,1.5,1.5V35.67z M25.168,5.668h-9V3h9V5.668z M30.168,35.67c0,0.828-0.672,1.5-1.5,1.5s-1.5-0.672-1.5-1.5v-21
-                    c0-0.828,0.672-1.5,1.5-1.5s1.5,0.672,1.5,1.5V35.67z"
-                                            />
-                                        </g>
-                                    </svg>
-                                </button>
                             </div>
                         );
                     })}
