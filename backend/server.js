@@ -7,7 +7,8 @@ const {
     removeFoodItem,
     getAllFromPantry,
     checkForExpiring,
-    updateFoodItem
+    updateFoodItem,
+    getRecipeFromID,
 } = require("./main");
 const { MongoClient } = require("mongodb");
 const cors = require("cors");
@@ -147,6 +148,21 @@ app.post("/editPantry", async (req, res) => {
     } catch (error) {
         console.error("Error updating food item:", error);
         res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+app.get('/getRecipeByID', async (req, res) => {
+    const { recipeID } = req.query; // Extract recipeID from request body
+
+    if (!recipeID) {
+        return res.status(400).json({ error: 'recipeID is required' });
+    }
+
+    try {
+        const recipeData = await getRecipeFromID(recipeID);
+        res.status(200).json(recipeData);
+    } catch (error) {
+        res.status(500).json({ error: 'Error fetching recipe data' });
     }
 });
 
