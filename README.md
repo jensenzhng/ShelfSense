@@ -9,7 +9,9 @@ ShelfSense is an intelligent assistant that transforms your pantry into a dynami
 We built ShelfSense using the MERN stack—MongoDB, Express, React, and Node.js—to create a scalable and responsive application. Voice recognition and natural language processing (NLP) were integrated to support hands-free interaction. The front end, built with React, offers a clean and intuitive user experience, while the backend, powered by Node.js and Express, ensures efficient data handling and communication between different modules. MongoDB serves as the database to store user data, recipes, and ingredient inventories, allowing for quick and seamless retrieval. To address speech-to-text input variations, we fine-tuned a language model (LLM) to enhance contextual understanding and accuracy when determining ingredients from transcribed audio. This improvement allowed us to overcome limitations with existing APIs and deliver a more tailored experience. The app’s email notification system is built using a personal email server prototype, which required careful security configurations to ensure proper functionality and safe interactions.
 
 # Challenges we ran into
-Speech Input Variability: We initially faced challenges with speech input inconsistencies that didn’t match the expected format of existing APIs. This required us to fine-tune a custom language model for contextually aware semantic reasoning, enhancing accuracy and efficiency. Email Integration Security: Sending automated emails for ingredient expiration notifications proved to be difficult during prototyping. We had to adjust security settings on our email server to accommodate these requirements, while still maintaining a secure environment. Real-Time Updates and Tracking: Implementing real-time updates to ingredient inventories and generating live recipe suggestions required us to optimize data handling and state management to avoid lags and maintain a smooth user experience.
+-**Speech Input Variability**: We initially faced challenges with speech input inconsistencies that didn’t match the expected format of existing APIs. This required us to fine-tune a custom language model for contextually aware semantic reasoning, enhancing accuracy and efficiency. 
+- **Email Integration Security**: Sending automated emails for ingredient expiration notifications proved to be difficult during prototyping. We had to adjust security settings on our email server to accommodate these requirements, while still maintaining a secure environment.
+- **Real-Time Updates and Tracking**: Implementing real-time updates to ingredient inventories and generating live recipe suggestions required us to optimize data handling and state management to avoid lags and maintain a smooth user experience.
 
 # Accomplishments that we're proud of
 We’re proud of successfully creating an application that blends cutting-edge technology with practical usability to make a positive environmental impact. We fine-tuned a custom language model that significantly improved speech-to-text recognition, enabling ShelfSense to better understand user inputs. We also built an effective system for real-time updates and notifications that keeps the app responsive and useful. Most importantly, we’re proud to have developed a tool that addresses a real-world problem in a way that encourages people to cook more creatively and sustainably.
@@ -21,9 +23,9 @@ This project taught us the importance of bridging the gap between technology and
 Moving forward, we plan to expand ShelfSense’s capabilities by introducing community-driven features that allow users to share their own recipes and tips, fostering a collaborative environment for cooking enthusiasts. Additionally, we’re looking to implement nutritional information to provide even more value to users seeking to make informed dietary choices. ShelfSense isn't just a recipe assistant—it’s a platform that turns every kitchen into a place of discovery, sustainability, and delicious possibilities.
 
 # Built With
-express.js
-llm
-mongodb
-node.js
-react
-tailwind
+- express.js
+- llm
+- mongodb
+- node.js
+- react
+- tailwind
